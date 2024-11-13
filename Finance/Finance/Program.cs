@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.ComponentModel.Design;
+using System.Data;
 using System.Data.Common;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
@@ -112,7 +113,7 @@ class Program
     static void Main()
     {
         //some users
-        //kategorije: placa, honorar, poklon, stipendija, hrana, rezije, prijevoz, hobi
+        //categories: placa, honorar, poklon, stipendija, hrana, rezije, prijevoz, hobi
 
         users.Add(new User(0, "Ana", "Anic", new DateTime(1990, 1, 1)));
         users[0].AddTransactionToAccount("checking", 1000.0, "placa", "prihod", "placa");
@@ -142,13 +143,14 @@ class Program
         users[2].AddTransactionToAccount("checking", 160.5, "auto", "rashod", "prijevoz");
         users[2].AddTransactionToAccount("checking", 150.2, "namirnice", "rashod", "hrana");
 
+        Console.Clear();
 
         while (true)
         {
             Console.WriteLine("Izbornik\n");
             Console.WriteLine("1 - Korisnici");
             Console.WriteLine("2 - Racuni");
-            Console.WriteLine("3 - Izlaz");
+            Console.WriteLine("3 - Izlaz\n");
 
             string choice = Console.ReadLine();
 
@@ -164,6 +166,7 @@ class Program
                     Console.Clear();
                     return;
                 default:
+                    Console.Clear();
                     Console.WriteLine("neispravan odabir, pokusajte ponovno\n");
                     break;
             }
@@ -173,37 +176,42 @@ class Program
     static void UserMenu()
     {
         Console.Clear();
-        Console.WriteLine("Izbornik: Korisnici\n");
-        Console.WriteLine("1 - unos novog korisnika");
-        Console.WriteLine("2 - brisanje korisnika");
-        Console.WriteLine("3 - uredjivanje korisnika");
-        Console.WriteLine("4 - pregled korisnika");
-        Console.WriteLine("\n0 - povratak\n");
 
-        string user_choice = Console.ReadLine();
-
-        switch (user_choice)
+        while (true)
         {
-            case "1":
-                AddNewUser();
-                break;
-            case "2":
-                DeleteUser();
-                break;
-            case "3":
-                EditUser();
-                break;
-            case "4":
-                ViewUsers();
-                break;
-            case "0":
-                Console.Clear();
-                return;
-            default:
-                Console.WriteLine("Nedopustena akcija, probajte ponovno\n");
-                UserMenu();
-                break;
+            Console.WriteLine("Izbornik: Korisnici\n");
+            Console.WriteLine("1 - unos novog korisnika");
+            Console.WriteLine("2 - brisanje korisnika");
+            Console.WriteLine("3 - uredjivanje korisnika");
+            Console.WriteLine("4 - pregled korisnika");
+            Console.WriteLine("\n0 - povratak\n");
+
+            string user_choice = Console.ReadLine();
+
+            switch (user_choice)
+            {
+                case "1":
+                    AddNewUser();
+                    break;
+                case "2":
+                    DeleteUser();
+                    break;
+                case "3":
+                    EditUser();
+                    break;
+                case "4":
+                    ViewUsers();
+                    break;
+                case "0":
+                    Console.Clear();
+                    return;
+                default:
+                    Console.Clear();
+                    Console.WriteLine("Nedopustena akcija, probajte ponovno\n");
+                    break;
+            }
         }
+        
     }
 
     static void AddNewUser()
@@ -224,6 +232,7 @@ class Program
         else if (name == "00")
         {
             Console.Clear();
+            Main();
             return;
         }
 
@@ -269,96 +278,105 @@ class Program
     static void DeleteUser()
     {
         Console.Clear();
-        Console.WriteLine("Izbornik: Brisanje Korisnika\n");
-        Console.WriteLine("1 - brisanje po id-u");
-        Console.WriteLine("2 - brisanje po prezimenu");
-        Console.WriteLine("\n0 - povratak");
-        Console.WriteLine("00 - pocetni izbornik\n");
-        string choice = Console.ReadLine();
-
-        //removing from id
-        if (choice == "1")
+        while (true)
         {
-            int id = 0;
-            bool validId = false;
+            Console.WriteLine("Izbornik: Brisanje Korisnika\n");
+            Console.WriteLine("1 - brisanje po id-u");
+            Console.WriteLine("2 - brisanje po prezimenu");
+            Console.WriteLine("\n0 - povratak");
+            Console.WriteLine("00 - pocetni izbornik\n");
+            string choice = Console.ReadLine();
 
-            while (!validId)
+            //removing from id
+            if (choice == "1")
             {
-                Console.WriteLine("Unesite ID korisnika: ");
-                string input = Console.ReadLine();
+                int id = 0;
+                bool validId = false;
 
-                if (int.TryParse(input, out id))
+                while (!validId)
                 {
-                    var user_index = users.FindIndex(u => u.id == id);
+                    Console.WriteLine("Unesite ID korisnika: ");
+                    string input = Console.ReadLine();
 
-                    if (user_index != -1)
+                    if (int.TryParse(input, out id))
                     {
-                        var ToDelete = users[user_index];
-                        users.Remove(ToDelete);
+                        var user_index = users.FindIndex(u => u.id == id);
 
-                        Console.Clear();
-                        Console.WriteLine($"Korisnik {ToDelete.name} {ToDelete.surname} je izbrisan.\n");
-                        validId = true;
-                        return;
+                        if (user_index != -1)
+                        {
+                            var ToDelete = users[user_index];
+                            users.Remove(ToDelete);
+
+                            Console.Clear();
+                            Console.WriteLine($"Korisnik {ToDelete.name} {ToDelete.surname} je izbrisan.\n");
+                            validId = true;
+                            return;
+                        }
+                        else
+                        {
+                            Console.Clear();
+                            Console.WriteLine("Korisnik s navedenim ID-em ne postoji.\n");
+                        }
                     }
                     else
                     {
-                        Console.WriteLine("Korisnik s navedenim ID-em ne postoji.\n");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("Unos nije validan. Unesite broj za ID.\n");
-                }
-            }
-        }
-
-        // deleting by surname
-        else if (choice == "2")
-        {
-            string lname = "";
-            bool validSurname = false;
-
-            while (!validSurname)
-            {
-                Console.WriteLine("Unesite prezime korisnika: ");
-                lname = Console.ReadLine().ToLower();
-
-                var usersToDelete = users.Where(u => u.surname.ToLower() == lname).ToList();
-
-                if (usersToDelete.Any())
-                {
-                    foreach (var user in usersToDelete)
-                    {
-                        users.Remove(user);
                         Console.Clear();
-                        lname = Char.ToUpper(lname[0]) + lname.Substring(1).ToLower();
-                        Console.WriteLine($"Korisnik s prezimenom {lname} je izbrisan.\n");
+                        Console.WriteLine("Neispravan unos, unesite ponovno\n");
                     }
-
-                    validSurname = true;
-                }
-                else
-                {
-                    Console.WriteLine("Korisnik s navedenim prezimenom ne postoji.\n");
                 }
             }
-        }
-        else if(choice == "00")
-        {
-            Console.Clear();
-            return;
-        }
-        else if (choice == "0")
-        {
-            Console.Clear();
-            UserMenu();
-            return;
-        }
 
-        else
-        {
-            Console.WriteLine("Nepoznata operacija. Molimo pokušajte ponovo.\n");
+            // deleting by surname
+            else if (choice == "2")
+            {
+                string lname = "";
+                bool validSurname = false;
+
+                while (!validSurname)
+                {
+                    Console.WriteLine("Unesite prezime korisnika: ");
+                    lname = Console.ReadLine().ToLower();
+
+                    var usersToDelete = users.Where(u => u.surname.ToLower() == lname).ToList();
+
+                    if (usersToDelete.Any())
+                    {
+                        foreach (var user in usersToDelete)
+                        {
+                            users.Remove(user);
+
+                            Console.Clear();
+                            lname = Char.ToUpper(lname[0]) + lname.Substring(1).ToLower();
+                            Console.WriteLine($"Korisnik s prezimenom {lname} je izbrisan.\n");
+                        }
+
+                        validSurname = true;
+                    }
+                    else
+                    {
+                        Console.Clear();
+                        Console.WriteLine("Korisnik s navedenim prezimenom ne postoji.\n");
+                        break;
+                    }
+                }
+            }
+            else if (choice == "00")
+            {
+                Console.Clear();
+                return;
+            }
+            else if (choice == "0")
+            {
+                Console.Clear();
+                UserMenu();
+                return;
+            }
+
+            else
+            {
+                Console.Clear();
+                Console.WriteLine("Neispravan unos, unesite ponovno\n");
+            }
         }
 
     }
@@ -369,45 +387,68 @@ class Program
         Console.WriteLine("Izbornik: Uredjivanje Korisnika\n");
 
         Console.WriteLine("Unesite '0' za povratak, '00' za pocetni izbornik, ili bilo sto drugo za pocetak uredjivanja korisnika: \n");
-        string name = Console.ReadLine().ToLower();
+        string input = Console.ReadLine().ToLower();
 
-        if (name == "0")
+        if (input == "0")
         {
             Console.Clear();
             UserMenu();
             return;
         }
-        else if (name == "00")
+        else if (input == "00")
         {
             Console.Clear();
+            Main();
             return;
         }
 
-        Console.WriteLine("Uneiste ID korisnika");
-        int id;
-        bool valid_id = false;
+        bool valid_id  = false;
 
         while (!valid_id)
         {
+            Console.WriteLine("Uneiste ID korisnika");
+            int id;
+            
             if (int.TryParse(Console.ReadLine(), out id))
             {
-                int userIndex = users.FindIndex(u => u.id == id);
+                int user_index = users.FindIndex(u => u.id == id);
 
-                if (userIndex != -1)
+                if (user_index != -1)
                 {
-                    var userEdit = users[userIndex];
+                    var user_edit = users[user_index];
 
-                    Console.WriteLine("Unesite novo ime korisnika: ");
-                    string fname = Console.ReadLine();
+                    string fname;
+                    while (true)
+                    { 
+                        Console.WriteLine("Unesite novo ime korisnika: ");
+                        fname = Console.ReadLine();
 
-                    fname = Char.ToUpper(fname[0]) + fname.Substring(1).ToLower();
+                        fname = Char.ToUpper(fname[0]) + fname.Substring(1).ToLower();
+                        if (CheckIfDigit(fname))
+                        {
+                            Console.Clear();
+                            Console.WriteLine("\nIme ne smije sadrzavati brojeve, pokusajte ponovno\n");
+                            break;
+                        }
 
-                    Console.WriteLine("Unesite novo prezime korisnika: ");
-                    string lname = Console.ReadLine();
+                    }
+                    user_edit.name = fname;
 
-                    lname = Char.ToUpper(lname[0]) + lname.Substring(1).ToLower();
+                    string lname;
+                    while (true)
+                    {
+                        Console.WriteLine("Unesite novo prezime korisnika: ");
+                        lname = Console.ReadLine();
 
-                    userEdit.surname = lname;
+                        lname = Char.ToUpper(lname[0]) + lname.Substring(1).ToLower();
+                        if (CheckIfDigit(lname))
+                        {
+                            Console.Clear();
+                            Console.WriteLine("\nPrezime ne smije sadrzavati brojeve, pokusajte ponovno\n");
+                            break;
+                        }
+                    }
+                    user_edit.surname = lname;
 
                     DateTime bdate;
                     Console.WriteLine("Unesite datum rodjenja korisnika (u formatu dd.MM.yyyy): ");
@@ -423,33 +464,54 @@ class Program
                         }
                     }
 
-                    userEdit.birth_date = bdate;
+                    user_edit.birth_date = bdate;
 
-                    users[userIndex] = userEdit;
+                    users[user_index] = user_edit;
 
                     Console.Clear();
-                    Console.WriteLine("Korisnik uspjesno uređjen.\n");
+                    Console.WriteLine("Korisnik uspjesno uredjen.\n");
                     valid_id = true;
                 }
                 else
                 {
-                    Console.WriteLine("Korisnik s navedenim ID-em ne postoji. Pokusajte ponovo.");
+                    Console.WriteLine("Korisnik s navedenim ID-em ne postoji, pokusajte ponovo.\n");
                 }
             }
             else
             {
-                Console.WriteLine("Unos nije validan. Unesite broj za ID.");
+                Console.Clear();
+                Console.WriteLine("Neispravan unos, unesite ponovno\n");
             }
+        }
+    }
+
+    static bool CheckIfDigit(string input)
+    {
+        bool contains = false;
+        foreach (char c in input)
+        {
+            if (Char.IsDigit(c))
+            {
+                contains = true;
+                break;
+            }
+        }
+        if (contains)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
         }
     }
 
     static void ViewUsers()
     {
         Console.Clear();
-        Console.WriteLine("Izbornik: Pregled Korisnika\n");
         while (true)
         {
-            Console.Clear();
+            Console.WriteLine("Izbornik: Pregled Korisnika\n");
             Console.WriteLine("1 - ispis svih korisnika po prezimenu");
             Console.WriteLine("2 - ispis svih korisnika starijih od 30 god");
             Console.WriteLine("3 - ispis svih korisnika s barem jednim racunom u minusu");
@@ -471,8 +533,16 @@ class Program
                     {
                         Console.WriteLine($"{user.id}\t{user.name}\t{user.surname}\t\t{user.birth_date.ToString("dd.MM.yyyy")}");
                     }
-                    Console.WriteLine("\nPritisnite bilo sto za povratak.\n");
-                    Console.ReadKey();
+                    Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
+                    string user_choice = Console.ReadLine();
+
+                    if (user_choice == "00")
+                    {
+                        Console.Clear();
+                        Main();
+                        return;
+                    }
+                    Console.Clear();
                     break;
 
                 case "2":
@@ -494,8 +564,16 @@ class Program
                     {
                         Console.WriteLine($"{user.id}\t{user.name}\t{user.surname}\t\t{user.birth_date.ToString("dd.MM.yyyy")}");
                     }
-                    Console.WriteLine("\nPritisnite bilo sto za povratak.\n");
-                    Console.ReadKey();
+                    Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
+                    string input = Console.ReadLine();
+
+                    if (input == "00")
+                    {
+                        Console.Clear();
+                        Main();
+                        return;
+                    }
+                    Console.Clear();
                     break;
                 case "3":
                     Console.Clear();
@@ -524,8 +602,16 @@ class Program
                     {
                         Console.WriteLine("Nema korisnika s negativnim stanjem racuna.\n");
                     }
-                    Console.WriteLine("\nPritisnite bilo sto za povratak.\n");
-                    Console.ReadKey();
+                    Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
+                    input = Console.ReadLine();
+
+                    if (input == "00")
+                    {
+                        Console.Clear();
+                        Main();
+                        return;
+                    }
+                    Console.Clear();
                     break;
 
                 case "0":
@@ -535,13 +621,12 @@ class Program
 
                 case "00":
                     Console.Clear();
+                    Main();
                     return;
 
                 default:
                     Console.Clear();
                     Console.WriteLine("neispravan unos, unesite ponovno\n");
-                    Console.WriteLine("Pritisnite bilo što za povratak na izbornik...\n");
-                    Console.ReadKey();
                     break;
             }
         }
@@ -576,6 +661,7 @@ class Program
 
             if (string.IsNullOrWhiteSpace(fname) || fname.Length < 2)
             {
+                Console.Clear();
                 Console.WriteLine("Ime ne moze biti prazno, pokusajte ponovo.\n");
                 continue;
             }
@@ -585,6 +671,7 @@ class Program
 
             if (string.IsNullOrWhiteSpace(lname) || lname.Length < 2)
             {
+                Console.Clear();
                 Console.WriteLine("Prezime ne moze biti prazno, pokusajte ponovo.\n");
                 continue;
             }
@@ -593,6 +680,7 @@ class Program
 
             if (!curr_user.exists)
             {
+                Console.Clear();
                 Console.WriteLine("Korisnik s tim imenom i prezimenom nije pronadjen, pokusajte ponovo.\n");
             }
             else
@@ -612,8 +700,8 @@ class Program
                 Console.WriteLine("3 - uređivanje transakcije");
                 Console.WriteLine("4 - pregled transakcija");
                 Console.WriteLine("5 - financijsko izvješće");
-                Console.WriteLine("\n0 - povratak\n");
-                Console.WriteLine("\n00 - povratak na pocetni izbornik\n");
+                Console.WriteLine("\n0 - povratak");
+                Console.WriteLine("00 - povratak na pocetni izbornik\n");
 
                 string choice = Console.ReadLine();
 
@@ -686,6 +774,7 @@ class Program
             }
             else
             {
+                Console.Clear();
                 Console.WriteLine("Pogresan unos, pokusajte ponovno.");
             }
         }
@@ -713,6 +802,7 @@ class Program
 
             if (string.IsNullOrWhiteSpace(account_type))
             {
+                Console.Clear();
                 Console.WriteLine("Unos je prazan, pokusajte ponovno.\n");
                 continue;
             }
@@ -725,6 +815,7 @@ class Program
             }
             else
             {
+                Console.Clear();
                 Console.WriteLine("Neispravan tip racuna, pokusajte ponovno.\n");
             }
         }
@@ -776,6 +867,7 @@ class Program
             }
             else
             {
+                Console.Clear();
                 Console.WriteLine("Neispravan unos, pokusajte ponovno.\n");
             }
         }
@@ -798,6 +890,7 @@ class Program
             }
             else
             {
+                Console.Clear();
                 Console.WriteLine("Nepoznata kategorija, pokusajte ponovno.\n");
             }
         }
@@ -814,6 +907,7 @@ class Program
             }
             else
             {
+                Console.Clear();
                 Console.WriteLine("Pogresan unos, pokusajte ponovno.\n");
             }
         }
@@ -839,6 +933,7 @@ class Program
                 }
                 else
                 {
+                    Console.Clear();
                     Console.WriteLine("Pogresan datum, pokusajte ponovno.\n");
                 }
             }
@@ -856,10 +951,9 @@ class Program
 
     static void DeleteTransaction(User person)
     {
-        
+        Console.Clear();
         while (true)
         {
-            Console.Clear();
             Console.WriteLine("Izbornik: Brisanje Transakcija\n");
             Console.WriteLine("Brisanje po:");
             Console.WriteLine("1 - ID-u");
@@ -888,13 +982,13 @@ class Program
             if (choice != "1" && choice != "2" && choice != "3" && choice != "4" && choice != "5" && choice != "6")
             {
                 Console.Clear();
-                Console.WriteLine("Neispravan izbor, pokusajte ponovno.");
+                Console.WriteLine("Neispravan izbor, pokusajte ponovno.\n");
                 continue;
             }
 
             while (true)
             {
-                Console.WriteLine("Jeste li sigurni da zelite obrisati transakciju? (yes/no)");
+                Console.WriteLine("Jeste li sigurni da zelite obrisati transakciju? (yes/no)\n");
                 string confirmation = Console.ReadLine().ToLower().Trim();
 
                 if (confirmation == "no")
@@ -910,9 +1004,11 @@ class Program
                 }
                 else
                 {
+                    Console.Clear();
                     Console.WriteLine("Neispravan unos, molimo unesite 'yes' ili 'no'.\n");
                 }
             }
+
 
             //choices
             if (choice == "1")
@@ -923,21 +1019,19 @@ class Program
                 int id_tran;
                 while (!int.TryParse(Console.ReadLine(), out id_tran) || id_tran < 0)
                 {
-                    Console.WriteLine("ID trazene transakcije ne postoji, pokusajte ponovno, id mora biti pozitivan");
+                    Console.Clear();
+                    Console.WriteLine("ID trazene transakcije ne postoji, pokusajte ponovno, id mora biti pozitivan\n");
                 }
 
                 bool transaction_found = false;
 
                 foreach (var account in person.accounts)
                 {
-                    Console.WriteLine($"Provjeravam transakcije za račun: {account.name_acc}");
 
                     var to_delete = account.transactions.Cast<Transaction>().FirstOrDefault(t => t.id == id_tran);
 
                     if (!to_delete.Equals(default(Transaction)))
                     {
-                        Console.WriteLine($"Pronadjena transakcija: {to_delete.id}, {to_delete.amount}, {to_delete.description}");
-
                         account.transactions.Remove(to_delete);
                         transaction_found = true;
                         break;
@@ -957,10 +1051,11 @@ class Program
 
                 while (true)
                 {
-                    Console.WriteLine("\nZelite li ponovno brisati transakciju? (yes/no)");
+                    Console.WriteLine("\nZelite li ponovno brisati transakciju? (yes/no)\n");
                     string again = Console.ReadLine().ToLower();
                     if (again == "yes")
                     {
+                        Console.Clear();
                         break; 
                     }
                     else if (again == "no")
@@ -970,7 +1065,8 @@ class Program
                     }
                     else
                     {
-                        Console.WriteLine("Neispravan unos, pokusajte ponovno");
+                        Console.Clear();
+                        Console.WriteLine("Neispravan unos, pokusajte ponovno\n");
                     }
                 }
             }
@@ -983,7 +1079,7 @@ class Program
 
                 string amount_type = choice == "2" ? "ispod" : "iznad";
 
-                Console.WriteLine($"Unesite iznos {amount_type} kojeg iznosa se transakcije brisu: ");
+                Console.WriteLine($"Unesite iznos {amount_type} kojeg iznosa se transakcije brisu: \n");
                 double amount_tran;
 
                 while (!double.TryParse(Console.ReadLine(), out amount_tran) || amount_tran <= 0)
@@ -1041,7 +1137,7 @@ class Program
             {
                 Console.Clear();
 
-                Console.WriteLine("Unesite kategoriju (placa, honorar, poklon, stipendija, hrana, prijevoz, rezije, hobi):");
+                Console.WriteLine("Unesite kategoriju (placa, honorar, poklon, stipendija, hrana, prijevoz, rezije, hobi):\n");
                 string input = Console.ReadLine().ToLower();
 
                 string[] validCategories = { "placa", "honorar", "poklon", "stipendija", "hrana", "prijevoz", "rezije", "hobi" };
@@ -1076,7 +1172,7 @@ class Program
 
             while (true)
             {
-                Console.WriteLine("\nZelite li ponovno brisati transakciju? (yes/no)");
+                Console.WriteLine("\nZelite li ponovno brisati transakciju? (yes/no)\n");
                 string again = Console.ReadLine().ToLower().Trim();
                 if (again == "yes")
                 {
@@ -1089,7 +1185,8 @@ class Program
                 }
                 else
                 {
-                    Console.WriteLine("neispravan unos, pokusajte ponovno");
+                    Console.Clear();
+                    Console.WriteLine("neispravan unos, pokusajte ponovno\n");
                 }
             }
         }
@@ -1134,6 +1231,7 @@ class Program
             }
             else
             {
+                Console.Clear();
                 Console.WriteLine("Neispravan unos, molimo unesite 'yes' ili 'no'.\n");
             }
         }
@@ -1146,6 +1244,7 @@ class Program
             Console.WriteLine("Unesite ID transakcije:");
             if (!int.TryParse(Console.ReadLine(), out id) || id < 0)
             {
+                Console.Clear();
                 Console.WriteLine("Neispravan unos. ID mora biti pozitivan cijeli broj.");
                 continue;
             }
@@ -1166,7 +1265,8 @@ class Program
             }
             else
             {
-                Console.WriteLine("Transakcija s navedenim ID-om ne postoji, pokusajte ponovo.");
+                Console.Clear();
+                Console.WriteLine("Transakcija s navedenim ID-om ne postoji, pokusajte ponovo.\n");
             }
         }
 
@@ -1197,9 +1297,10 @@ class Program
         double new_amount;
         while (true)
         {
-            Console.WriteLine("Unesite novi iznos transakcije: ");
+            Console.WriteLine("Unesite novi iznos transakcije: \n");
             if (!double.TryParse(Console.ReadLine(), out new_amount) || new_amount <= 0)
             {
+                Console.Clear();
                 Console.WriteLine("Neispravan unos, iznos mora biti pozitivan broj\n");
             }
             else
@@ -1210,14 +1311,14 @@ class Program
         }
 
         //new descriptiom
-        Console.WriteLine("Unesite novi opis transakcije");
+        Console.WriteLine("Unesite novi opis transakcije:\n");
         string new_description = Console.ReadLine();
         edit_tran.description = string.IsNullOrEmpty(new_description) ? "Standardna transakcija" : new_description;
 
         string[] validTypes = { "prihod", "rashod" };
         while (true)
         {
-            Console.WriteLine("Unesite tip transakcije (prihod/rashod): ");
+            Console.WriteLine("Unesite tip transakcije (prihod/rashod): \n");
             string new_type = Console.ReadLine().ToLower();
 
             if (Array.Exists(validTypes, t => t == new_type))
@@ -1227,6 +1328,7 @@ class Program
             }
             else
             {
+                Console.Clear();
                 Console.WriteLine("Neispravan unos, pokusajte ponovno\n");
             }
         }
@@ -1238,16 +1340,16 @@ class Program
         //type and category
         while (true)
         {
-            Console.WriteLine("Unesite kategoriju transakcije:");
+            Console.WriteLine("Unesite kategoriju transakcije:\n");
             if (edit_tran.type == "prihod")
             {
                 available_categories = income_categories;
-                Console.WriteLine("Dostupne kategorije za prihode");
+                Console.WriteLine("\nDostupne kategorije za prihode:");
             }
             else
             {
                 available_categories = expense_categories;
-                Console.WriteLine("Dostupne kategorije za rashode");
+                Console.WriteLine("\nDostupne kategorije za rashode:");
             }
 
             foreach (string category in available_categories)
@@ -1260,6 +1362,7 @@ class Program
             while (true)
             {
                 Console.WriteLine("Unesite kategoriju");
+                Console.WriteLine($"Kategorije: {string.Join(", ", available_categories)}");
                 new_category = Console.ReadLine().ToLower();
 
                 if (Array.Exists(available_categories, category => category == new_category))
@@ -1269,6 +1372,7 @@ class Program
                 }
                 else
                 {
+                    Console.Clear();
                     Console.WriteLine("Neispravna kategorija, pokusajte ponovno.\n");
                 }
             }
@@ -1289,18 +1393,25 @@ class Program
         }
         Console.Clear();
         Console.WriteLine("Transakcija je uspjesno uredjena.\n");
-        Console.WriteLine("Pritisnite bilo sto za povratak u izbornik.");
-        Console.ReadKey();
+        Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
+        string user_choice = Console.ReadLine();
 
-        AccountMenu();
+        if (user_choice == "00")
+        {
+            Console.Clear();
+            Main();
+            return;
+        }
+
+        Console.Clear();
         return;
     }
 
     static void ViewTransactions(User person)
     {
+        Console.Clear();
         while (true)
         {
-            Console.Clear();
             Console.WriteLine("Izbornik: Pregled transakcija\n");
             Console.WriteLine("1 - sve transakcije:");
             Console.WriteLine("2 - sortirane po iznosu uzlazno");
@@ -1387,6 +1498,7 @@ class Program
 
                         if (!validCategories.Contains(category_input))
                         {
+                            Console.Clear();
                             Console.WriteLine("neispravan unos, pokusajte ponovno\n");
                         }
                     } while (!validCategories.Contains(category_input));
@@ -1399,7 +1511,9 @@ class Program
                     break;
 
                 case "10":
+                    Console.Clear();
                     string type_input;
+                    string[] available_categories;
                     do
                     {
                         Console.WriteLine("Unesite tip transakcije (prihod/rashod):");
@@ -1407,35 +1521,40 @@ class Program
 
                         if (type_input != "prihod" && type_input != "rashod")
                         {
+                            Console.Clear();
                             Console.WriteLine("Neispravan unos, pokusajte ponovno\n");
                         }
 
                     } while (type_input != "prihod" && type_input != "rashod");
 
-                    string category_input_;
                     string[] income_categories = { "placa", "honorar", "poklon", "stipendija" };
                     string[] expense_categories = { "hrana", "prijevoz", "rezije", "hobi" };
 
+                    if (type_input == "prihod")
+                    {
+                        available_categories = income_categories;
+                        Console.WriteLine("\nDostupne kategorije za prihod:");
+                    }
+                    else
+                    {
+                        available_categories = expense_categories;
+                        Console.WriteLine("\nDostupne kategorije za rashod:");
+                    }
+
+
+                    string category_input_;
+
                     do
                     {
-                        Console.WriteLine("Unesite kategoriju (placa, honorar, poklon, stipendija, hrana, prijevoz, rezije, hobi):");
+                        Console.WriteLine($"Kategorije: {string.Join(", ", available_categories)}");
                         category_input_ = Console.ReadLine().ToLower();
 
                         if (!validCategories.Contains(category_input_))
                         {
+                            Console.Clear();
                             Console.WriteLine("Neispravan unos, pokusajte ponovno\n");
+                            Console.WriteLine(string.Join(", ", available_categories));
                             continue;
-                        }
-                        if (type_input == "prihod" && !income_categories.Contains(category_input_))
-                        {
-                            Console.WriteLine("Kategorija nije rashod, pokusajte ponovno\n");
-                            Console.WriteLine("Kategorije rashoda: hrana, prijevoz, rezije, hobi\n");
-
-                        }
-                        else if (type_input == "rashod" && !expense_categories.Contains(category_input_))
-                        {
-                            Console.WriteLine("Kategorija nije prihod, pokusajte ponovno\n");
-                            Console.WriteLine("Kategorije prihoda: placa, honorar, poklon, stipendija\n");
                         }
                         else
                         {
@@ -1462,8 +1581,7 @@ class Program
                 default:
                     Console.Clear();
                     Console.WriteLine("Nedopusten odabir, probajte ponovno\n");
-                    ViewTransactions(person);
-                    break;
+                    continue;
             }
 
             if (transactions_for_display.Count > 0)
@@ -1490,6 +1608,7 @@ class Program
 
             Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
             user_choice = Console.ReadLine();
+            Console.Clear();
 
             if (user_choice == "00")
             {
@@ -1504,57 +1623,59 @@ class Program
     static void FinancialStatement(User person)
     {
         Console.Clear();
-        Console.WriteLine("Izbornik: Financijsko Izvjesce\n");
-        Console.WriteLine("1 - trenutno stanje racuna:");
-        Console.WriteLine("2 - broj ukupnih transakcija");
-        Console.WriteLine("3 - ukupan iznos prihoda i rashoda za odabrani mjesec i godinu");
-        Console.WriteLine("4 - postotak udjela rashoda za odabranu kategoriju");
-        Console.WriteLine("5 - prosjecni iznos transakcije za odabrani mjesec i godinu");
-        Console.WriteLine("6 - prosjecni iznos transakcije za odabranu kategoriju");
-        Console.WriteLine("\n0 - povratak");
-        Console.WriteLine("\n00 - pocetni izbornik\n");
-
-        string user_choice = Console.ReadLine().ToLower();
-
-        switch (user_choice)
+        while (true)
         {
-            case "1":
-                CurrentBalance(person);
-                break;
+            Console.WriteLine("Izbornik: Financijsko Izvjesce\n");
+            Console.WriteLine("1 - trenutno stanje racuna");
+            Console.WriteLine("2 - broj ukupnih transakcija");
+            Console.WriteLine("3 - ukupan iznos prihoda i rashoda za odabrani mjesec i godinu");
+            Console.WriteLine("4 - postotak udjela rashoda za odabranu kategoriju");
+            Console.WriteLine("5 - prosjecni iznos transakcije za odabrani mjesec i godinu");
+            Console.WriteLine("6 - prosjecni iznos transakcije za odabranu kategoriju");
+            Console.WriteLine("\n0 - povratak");
+            Console.WriteLine("00 - pocetni izbornik\n");
 
-            case "2":
-                NumberOfTransactions(person);
-                break;
+            string user_choice = Console.ReadLine().ToLower();
 
-            case "3":
-                IncomeAndExpensesDate(person);
-                break;
+            switch (user_choice)
+            {
+                case "1":
+                    CurrentBalance(person);
+                    break;
 
-            case "4":
-                PercentageCategory(person);
-                break;
+                case "2":
+                    NumberOfTransactions(person);
+                    break;
 
-            case "5":
-                AverageMonthYear(person);
-                break;
+                case "3":
+                    IncomeAndExpensesDate(person);
+                    break;
 
-            case "6":
-                AverageCategory(person);
-                break;
-            case "0":
-                Console.Clear();
-                AccountMenu();
-                return;
-            case "00":
-                Console.Clear();
-                return;
-            default:
-                Console.Clear();
-                Console.WriteLine("Nedopustena akcija, probajte ponovno\n");
-                FinancialStatement(person);
-                return;
+                case "4":
+                    PercentageCategory(person);
+                    break;
+
+                case "5":
+                    AverageMonthYear(person);
+                    break;
+
+                case "6":
+                    AverageCategory(person);
+                    break;
+                case "0":
+                    Console.Clear();
+                    AccountMenu();
+                    return;
+                case "00":
+                    Console.Clear();
+                    Main();
+                    return;
+                default:
+                    Console.Clear();
+                    Console.WriteLine("Nedopustena akcija, probajte ponovno\n");
+                    break;
+            }
         }
-
     }
 
     static void CurrentBalance(User person)
@@ -1582,14 +1703,43 @@ class Program
         double balance = totalIncome - totalExpenses;
 
         Console.Clear();
-        Console.WriteLine($"Trenutno stanje računa: {balance:F2}\n");
+        Console.WriteLine($"Trenutno stanje racuna: {balance:F2}\n");
+
+        Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
+        string user_choice = Console.ReadLine();
+        Console.Clear();
+        if (user_choice == "00")
+        {
+            Console.Clear();
+            Main();
+            return;
+        }
     }
 
     static void NumberOfTransactions(User person)
     {
-        var all_transactions = person.accounts.SelectMany(acc => acc.transactions.Cast<Transaction>()).ToList();
+        int total = 0;
+
+        foreach (var account in person.accounts)
+        {
+            foreach (Transaction transaction in account.transactions)
+            {
+                total++;
+            }
+        }
+
         Console.Clear();
-        Console.WriteLine($"Ukupan broj transakcija: {all_transactions}\n");
+        Console.WriteLine($"Ukupan broj transakcija: {total}\n");
+
+        Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
+        string user_choice = Console.ReadLine();
+        Console.Clear();
+        if (user_choice == "00")
+        {
+            Console.Clear();
+            Main();
+            return;
+        }
     }
 
     static void IncomeAndExpensesDate(User person)
@@ -1606,6 +1756,7 @@ class Program
             }
             else
             {
+                Console.Clear();
                 Console.WriteLine("neispravan unos, pokusajte ponovno\n");
             }
         }
@@ -1622,6 +1773,7 @@ class Program
                 }
                 else
                 {
+                    Console.Clear();
                     Console.WriteLine("Godina mora imati 4 znamenke, pokusajte ponovno.\n");
                 }
             }
@@ -1652,6 +1804,16 @@ class Program
         Console.Clear();
         Console.WriteLine($"Ukupni prihodi: {total_income}");
         Console.WriteLine($"Ukupni rashodi: {total_expenses}\n");
+
+        Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
+        string user_choice = Console.ReadLine();
+        Console.Clear();
+        if (user_choice == "00")
+        {
+            Console.Clear();
+            Main();
+            return;
+        }
     }
 
     static void PercentageCategory(User person)
@@ -1680,7 +1842,16 @@ class Program
 
         Console.Clear();
         Console.WriteLine($"Postotak udjela rashoda za kategoriju '{category_input}' iznosi: {percentage:F2}%");
-        Console.WriteLine("\n\n");
+        
+        Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
+        string user_choice = Console.ReadLine();
+        Console.Clear();
+        if (user_choice == "00")
+        {
+            Console.Clear();
+            Main();
+            return;
+        }
         return;
     }
 
@@ -1690,19 +1861,35 @@ class Program
     {
         Console.Clear();
 
-        Console.WriteLine("Unesite godinu za koju zelite izracunati prosjek transakcija: ");
-        int year;
-        while (!int.TryParse(Console.ReadLine(), out year) || year < 1)
+        int month, year;
+        while (true)
         {
-            Console.WriteLine("Neispravan unos, pokusajte ponovno\n");
+            Console.WriteLine("Unesite godinu za koju zelite izracunati prosjek transakcija: ");
+            if (int.TryParse(Console.ReadLine(), out year) && year >= 1)
+            {
+                break;
+            }
+            else
+            {
+                Console.Clear();
+                Console.WriteLine("Neispravan unos, pokusajte ponovno\n");
+            }
         }
 
-        Console.WriteLine("Unesite mjesec za koji zelite izracunati prosjek transakcija (1-12):");
-        int month;
-        while (!int.TryParse(Console.ReadLine(), out month) || month < 1 || month > 12)
+        while (true)
         {
-            Console.WriteLine("Neispravan unos, pokusajte ponovno\n");
+            Console.WriteLine("Unesite mjesec za koji zelite izracunati prosjek transakcija (1-12):");
+            if (int.TryParse(Console.ReadLine(), out month) && month >= 1 && month <= 12)
+            {
+                break;
+            }
+            else
+            {
+                Console.Clear();
+                Console.WriteLine("Neispravan unos, pokusajte ponovno\n");
+            }
         }
+        
 
         var all_transactions = person.accounts.SelectMany(acc => acc.transactions.Cast<Transaction>()).ToList();
         var month_transactions = all_transactions.Where(t => t.date.Year == year && t.date.Month == month).ToList();
@@ -1712,12 +1899,22 @@ class Program
             double total_amount = month_transactions.Sum(t => t.amount);
             double average_amount = total_amount / month_transactions.Count;
             Console.Clear();
-            Console.WriteLine($"Prosečan iznos transakcija za {month}/{year} iznosi: {average_amount:F2}\n");
+            Console.WriteLine($"Prosjecan iznos transakcija za {month}/{year}. iznosi: {average_amount:F2}\n");
         }
         else
         {
             Console.Clear();
-            Console.WriteLine($"Nema transakcija za navedeni mjesec i godinu ({month}/{year}).\n");
+            Console.WriteLine($"Nema transakcija za {month}/{year}.\n");
+        }
+
+        Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
+        string user_choice = Console.ReadLine();
+        Console.Clear();
+        if (user_choice == "00")
+        {
+            Console.Clear();
+            Main();
+            return;
         }
     }
 
@@ -1746,12 +1943,22 @@ class Program
             double total_amount = category_transactions.Sum(t => t.amount);
             double average_amount = total_amount / category_transactions.Count;
             Console.Clear();
-            Console.WriteLine($"Prosečan iznos transakcije u kategoriji '{category_input}' je: {average_amount:F2}\n");
+            Console.WriteLine($"prosjecan iznos transakcije u kategoriji '{category_input}' je: {average_amount:F2}\n");
         }
         else
         {
             Console.Clear();
             Console.WriteLine("Nema transakcija u odabranoj kategoriji.\n");
+        }
+
+        Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
+        string user_choice = Console.ReadLine();
+        Console.Clear();
+        if (user_choice == "00")
+        {
+            Console.Clear();
+            Main();
+            return;
         }
     }
 }
