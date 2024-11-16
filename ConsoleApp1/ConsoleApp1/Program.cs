@@ -1,147 +1,110 @@
-﻿using System;
-using System.Collections;
-using System.ComponentModel.Design;
-using System.Data;
-using System.Data.Common;
-using System.Reflection.Metadata;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.InteropServices.Marshalling;
-using System.Transactions;
+﻿using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Principal;
+using System.Text;
+using System.Threading.Tasks;
 using System.Xml.Linq;
-
-//structures for data
-public struct User
-{
-    public int id;
-    public string name;
-    public string surname;
-    public DateTime birth_date;
-    public List<Account> accounts;
-    public bool exists;
-
-    //constructor
-    public User(int id, string name, string surname, DateTime birth_date)
-    {
-        this.id = id;
-        this.name = name;
-        this.surname = surname;
-        this.birth_date = birth_date;
-
-        this.accounts = new List<Account>
-        {
-            new Account("checking", 100.0, new ArrayList()),
-            new Account("savings", 0.0, new ArrayList()),
-            new Account("prepaid", 0.0, new ArrayList())
-        };
-
-        this.exists = true;
-    }
-    public void AddAccount(string name_acc, double amount)
-    {
-        accounts.Add(new Account(name_acc, amount, new ArrayList()));
-    }
-
-    public void AddTransactionToAccount(string account_type, double amount, string description, string type, string category)
-    {
-        int account_index = accounts.FindIndex(acc => acc.name_acc == account_type);
-
-        if(account_index != -1)
-        {
-            Account account = accounts[account_index];
-
-            account.AddTransaction(amount, description, type, category);
-
-            accounts[account_index] = account;
-        }
-    }
-}
-
-public struct Account
-{
-    public string name_acc;
-    public double amount;
-    private static int last_transaction_id = 0;
-    public ArrayList transactions;
-
-    public Account(string name_acc, double amount, ArrayList transactions)
-    {
-        this.name_acc = name_acc;
-        this.amount = amount;
-        this.transactions = transactions;
-    }
-
-    public void AddTransaction(double amount, string description, string type, string category)
-    {
-        int transaction_id = last_transaction_id++;
-
-        if (type == "prihod")
-        {
-            this.amount += amount; 
-        }
-        else if (type == "rashod")
-        {
-            this.amount -= amount;
-        }
-
-        transactions.Add(new Transaction
-        {
-            id = transaction_id,
-            amount = amount,
-            description = description,
-            type = type,
-            category = category,
-            date = DateTime.Now,
-        });
-
-    }
-}
-
-struct Transaction
-{
-    public int id;
-    public double amount;
-    public string description;
-    public string type;
-    public string category;
-    public DateTime date;
-}
 
 class Program
 {
-    static List<User> users = new List<User>();
+    static Dictionary<int, (string name, string surname, DateTime birth_date,
+Dictionary<string, float> accounts)> users = new Dictionary<int, (string, string, DateTime, Dictionary<string, float>)>();
+
+    static Dictionary<int, Dictionary<string, List<(int transaction_id, float transaction_amount,
+        string transaction_description, string transaction_type, string transaction_category, DateTime transaction_date)>>> transactions =
+        new Dictionary<int, Dictionary<string, List<(int, float, string, string, string, DateTime)>>>();
+
+    static int last_transaction_id = 0;
+
+    static void AddTransaction(int id, string account_name, float amount, string description, string type, string category)
+    {
+        if (!transactions.ContainsKey(id))
+        {
+            transactions[id] = new Dictionary<string, List<(int, float, string, string, string, DateTime)>>();
+        }
+
+        if (!transactions[id].ContainsKey(account_name))
+        {
+            transactions[id][account_name] = new List<(int, float, string, string, string, DateTime)>();
+        }
+
+        last_transaction_id++;
+
+        var newTransaction = (
+            last_transaction_id : last_transaction_id,
+            transaction_amount : amount,
+            transaction_description : description,
+            transaction_type : type,
+            transaction_category : category,
+            transaction_date : DateTime.Now
+            );
+
+        transactions[id][account_name].Add(newTransaction);
+        
+
+        if (users.ContainsKey(id) && users[id].accounts.ContainsKey(account_name))
+        {
+            if(type == "prihod")
+            {
+                users[id].accounts[account_name] += amount;
+            }
+            else if (type == "rashod")
+            {
+                users[id].accounts[account_name] -= amount;
+            }
+        }
+    }
+    
+
 
     static void Main()
     {
         //some users
         //categories: placa, honorar, poklon, stipendija, hrana, rezije, prijevoz, hobi
 
-        users.Add(new User(0, "Ana", "Anic", new DateTime(1990, 1, 1)));
-        users[0].AddTransactionToAccount("checking", 1000.0, "placa", "prihod", "placa");
-        users[0].AddTransactionToAccount("savings", 2000.0, "projekt", "prihod", "honorar");
-        users[0].AddTransactionToAccount("savings", 50.0, "by grandparents", "prihod", "poklon");
-        users[0].AddTransactionToAccount("prepaid", 200.0, "fesb", "prihod", "stipendija");
-        users[0].AddTransactionToAccount("checking", 48.52, "kupovina hrane", "rashod", "hrana");
-        users[0].AddTransactionToAccount("checking", 64.3, "struja", "rashod", "rezije");
-        users[0].AddTransactionToAccount("checking", 78.4, "auto", "rashod", "prijevoz");
-        users[0].AddTransactionToAccount("checking", 40.0, "tenis", "rashod", "hobi");
+        users[0] = (
+            "Ana", "Anic", 
+            new DateTime(1990, 5, 20), 
+            new Dictionary<string, float>
+            {
+                {"checking", 100.0f },
+                {"savings", 0.0f },
+                {"prepaid", 0.0f }
+            }
+        );
+        AddTransaction(0, "checking", 150.0f, "stigla placa", "prihod", "placa");
+        AddTransaction(0, "savings", 200.0f, "umjetnina", "prihod", "honorar");
+        AddTransaction(0, "prepaid", 150.0f, "fesb", "prihod", "stipendija");
+        AddTransaction(0, "checking", 200.0f, "rodjendan", "prihod", "poklon");
+        AddTransaction(0, "checking", 50.0f, "gorivo", "rashod", "prijevoz");
+        AddTransaction(0, "checking", 50.0f, "kupovina hrane", "rashod", "hrana");
+        AddTransaction(0, "checking", 50.0f, "voda", "rashod", "rezije");
+        AddTransaction(0, "checking", 200.0f, "tenis", "rashod", "hobi");
 
-        users.Add(new User(1, "Marko", "Maric", new DateTime(2000, 5, 6)));
-        users[1].AddTransactionToAccount("savings", 0.0, "umjetnina", "prihod", "honorar");
-        users[1].AddTransactionToAccount("checking", 50.0, "placa", "prihod", "placa");
-        users[1].AddTransactionToAccount("checking", 72.6, "voda", "rashod", "rezije");
-        users[1].AddTransactionToAccount("checking", 40.0, "nogomet", "rashod", "hobi");
-        users[1].AddTransactionToAccount("checking", 25.5, "autobus", "rashod", "prijevoz");
-        users[1].AddTransactionToAccount("checking", 82.2, "yumyum", "rashod", "hrana");
 
-        users.Add(new User(2, "Ante", "Antic", new DateTime(1976, 10, 12)));
-        users[2].AddTransactionToAccount("prepaid", 2000.0, "za unuke", "prihod", "stipendija");
-        users[2].AddTransactionToAccount("checking", 4563.5, "mirovina", "prihod", "placa");
-        users[2].AddTransactionToAccount("savings", 550.0, "umjetnina", "prihod", "honorar");
-        users[2].AddTransactionToAccount("checking", 100.0, "rodjendan", "prihod", "poklon");
-        users[2].AddTransactionToAccount("checking", 90.6, "voda", "rashod", "rezije");
-        users[2].AddTransactionToAccount("checking", 20.0, "turnir u sahu", "rashod", "hobi");
-        users[2].AddTransactionToAccount("checking", 160.5, "auto", "rashod", "prijevoz");
-        users[2].AddTransactionToAccount("checking", 150.2, "namirnice", "rashod", "hrana");
+        users[1] = (
+            "Marko", "Maric",
+            new DateTime(1990, 5, 20),
+            new Dictionary<string, float>
+            {
+                {"checking", 100.0f },
+                {"savings", 0.0f },
+                {"prepaid", 0.0f }
+            }
+        );
+
+        AddTransaction(1, "checking", 100.0f, "placa", "prihod", "placa");
+        AddTransaction(1, "savings", 60.0f, "umjetnina", "prihod", "honorar");
+        AddTransaction(1, "prepaid", 150.0f, "fesb", "prihod", "stipendija");
+        AddTransaction(1, "checking", 50.0f, "rodjendan", "prihod", "poklon");
+        AddTransaction(1, "checking", 150.0f, "gorivo", "rashod", "prijevoz");
+        AddTransaction(1, "checking", 180.0f, "kupovina hrane", "rashod", "hrana");
+        AddTransaction(1, "checking", 50.0f, "voda", "rashod", "rezije");
+        AddTransaction(1, "checking", 250.0f, "tenis", "rashod", "hobi");
+
+
 
         Console.Clear();
 
@@ -152,7 +115,7 @@ class Program
             Console.WriteLine("2 - Racuni");
             Console.WriteLine("3 - Izlaz\n");
 
-            string choice = Console.ReadLine();
+            string choice = Console.ReadLine()?.Trim();
 
             switch (choice)
             {
@@ -170,7 +133,9 @@ class Program
                     Console.WriteLine("neispravan odabir, pokusajte ponovno\n");
                     break;
             }
+
         }
+
     }
 
     static void UserMenu()
@@ -211,43 +176,58 @@ class Program
                     break;
             }
         }
-        
+
     }
+
 
     static void AddNewUser()
     {
         Console.Clear();
         Console.WriteLine("Izbornik: Novi Korisnik\n");
-
         Console.WriteLine("Unesite '0' za povratak, ili '00' za pocetni izbornik: \n");
-        Console.WriteLine("Unesite ime korisnika: ");
-        string name = Console.ReadLine();
 
-        if(name == "0")
+        string name;
+        while (true)
         {
-            Console.Clear();
-            UserMenu();
-            return;
-        }
-        else if (name == "00")
-        {
-            Console.Clear();
-            Main();
-            return;
+            Console.WriteLine("Unesite ime korisnika: ");
+            name = Console.ReadLine()?.Trim();
+
+            if (name == "0")
+            {
+                Console.Clear();
+                UserMenu();
+                return;
+            }
+            else if (name == "00")
+            {
+                Console.Clear();
+                Main();
+                return;
+            }
+            else if (name.All(char.IsDigit))
+            {
+                Console.Clear();
+                Console.WriteLine("ime ne smije imati broj, pokusajate ponovno\n");
+                continue; 
+            }
+            else
+            {
+                break;
+            }
         }
 
-        while (string.IsNullOrWhiteSpace(name))
+        string surname;
+        while (true)
         {
-            Console.WriteLine("neispravan unos, pokusajte poonnvno.");
-            name = Console.ReadLine();
-        }
+            Console.Write("Unesite prezime korisnika: ");
+            surname = Console.ReadLine()?.Trim();
 
-        Console.WriteLine("Unesite prezime korisnika: ");
-        string surname = Console.ReadLine();
-        while (string.IsNullOrWhiteSpace(surname))
-        {
-            Console.WriteLine("neispravan unos, pokusajte ponovno.");
-            surname = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(surname))
+            {
+                Console.WriteLine("neispravan unos, pokusajte ponovo.\n");
+                continue;
+            }
+            break;
         }
 
         DateTime birthdate;
@@ -264,16 +244,27 @@ class Program
             }
         }
 
-        int newId = users.Count + 1;
+        int new_id = users.Count + 1;
 
-        User newUser = new User(id: newId, name: name, surname: surname, birth_date: birthdate);
+        var newUser = (
+            name: name,
+            surname: surname,
+            birth_date: birthdate,
+            accounts : new Dictionary<string, float>
+            {
+                { "checking", 100.0f },  
+                { "savings", 0.0f },    
+                { "prepaid", 0.0f }
+            }
+        );
 
-        users.Add(newUser);
+        users.Add(new_id, newUser);
 
         Console.Clear();
         Console.WriteLine("Korisnik uspjesno dodan\n");
         return;
     }
+
 
     static void DeleteUser()
     {
@@ -300,12 +291,10 @@ class Program
 
                     if (int.TryParse(input, out id))
                     {
-                        var user_index = users.FindIndex(u => u.id == id);
-
-                        if (user_index != -1)
+                        if (users.ContainsKey(id))
                         {
-                            var ToDelete = users[user_index];
-                            users.Remove(ToDelete);
+                            var ToDelete = users[id];
+                             users.Remove(id);
 
                             Console.Clear();
                             Console.WriteLine($"Korisnik {ToDelete.name} {ToDelete.surname} je izbrisan.\n");
@@ -326,7 +315,7 @@ class Program
                 }
             }
 
-            // deleting by surname
+            // removing by surname
             else if (choice == "2")
             {
                 string lname = "";
@@ -337,13 +326,20 @@ class Program
                     Console.WriteLine("Unesite prezime korisnika: ");
                     lname = Console.ReadLine().ToLower();
 
-                    var usersToDelete = users.Where(u => u.surname.ToLower() == lname).ToList();
+                    if (lname.Any(char.IsDigit))
+                    {
+                        Console.Clear();
+                        Console.WriteLine("Neispravan unos! Prezime ne moze sadrzavati broj.\n");
+                        continue;
+                    }
+
+                    var usersToDelete = users.Where(u => u.Value.surname.ToLower() == lname).ToList();
 
                     if (usersToDelete.Any())
                     {
                         foreach (var user in usersToDelete)
                         {
-                            users.Remove(user);
+                            users.Remove(user.Key);
 
                             Console.Clear();
                             lname = Char.ToUpper(lname[0]) + lname.Substring(1).ToLower();
@@ -378,8 +374,8 @@ class Program
                 Console.WriteLine("Neispravan unos, unesite ponovno\n");
             }
         }
-
     }
+
 
     static void EditUser()
     {
@@ -402,34 +398,35 @@ class Program
             return;
         }
 
-        bool valid_id  = false;
+        bool valid_id = false;
 
         while (!valid_id)
         {
             Console.WriteLine("Uneiste ID korisnika");
             int id;
-            
+
             if (int.TryParse(Console.ReadLine(), out id))
             {
-                int user_index = users.FindIndex(u => u.id == id);
-
-                if (user_index != -1)
+                
+                if (users.ContainsKey(id))
                 {
-                    var user_edit = users[user_index];
+                    var user_edit = users[id];
 
                     string fname;
                     while (true)
-                    { 
+                    {
                         Console.WriteLine("Unesite novo ime korisnika: ");
-                        fname = Console.ReadLine();
+                        fname = Console.ReadLine()?.Trim();
 
-                        fname = Char.ToUpper(fname[0]) + fname.Substring(1).ToLower();
-                        if (CheckIfDigit(fname))
+                        if (string.IsNullOrWhiteSpace(fname) || fname.Any(char.IsDigit))
                         {
                             Console.Clear();
-                            Console.WriteLine("\nIme ne smije sadrzavati brojeve, pokusajte ponovno\n");
-                            break;
+                            Console.WriteLine("Neispravan unos! ime ne moze sadrzavati broj, niti biti prazno\n");
+                            continue;
                         }
+
+                        fname = Char.ToUpper(fname[0]) + fname.Substring(1).ToLower();
+                        break;
 
                     }
                     user_edit.name = fname;
@@ -440,13 +437,14 @@ class Program
                         Console.WriteLine("Unesite novo prezime korisnika: ");
                         lname = Console.ReadLine();
 
-                        lname = Char.ToUpper(lname[0]) + lname.Substring(1).ToLower();
-                        if (CheckIfDigit(lname))
+                        if (string.IsNullOrWhiteSpace(lname) ||lname.Any(char.IsDigit))
                         {
                             Console.Clear();
-                            Console.WriteLine("\nPrezime ne smije sadrzavati brojeve, pokusajte ponovno\n");
-                            break;
+                            Console.WriteLine("Neispravan unos! Prezime ne moze sadrzavati broj, niti biti prazno\n");
+                            continue;
                         }
+                        lname = Char.ToUpper(lname[0]) + lname.Substring(1).ToLower();
+                        break;
                     }
                     user_edit.surname = lname;
 
@@ -466,7 +464,7 @@ class Program
 
                     user_edit.birth_date = bdate;
 
-                    users[user_index] = user_edit;
+                    users[id] = user_edit;
 
                     Console.Clear();
                     Console.WriteLine("Korisnik uspjesno uredjen.\n");
@@ -474,6 +472,7 @@ class Program
                 }
                 else
                 {
+                    Console.Clear();
                     Console.WriteLine("Korisnik s navedenim ID-em ne postoji, pokusajte ponovo.\n");
                 }
             }
@@ -485,26 +484,6 @@ class Program
         }
     }
 
-    static bool CheckIfDigit(string input)
-    {
-        bool contains = false;
-        foreach (char c in input)
-        {
-            if (Char.IsDigit(c))
-            {
-                contains = true;
-                break;
-            }
-        }
-        if (contains)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
 
     static void ViewUsers()
     {
@@ -526,12 +505,12 @@ class Program
                     Console.Clear();
                     Console.WriteLine("Popis korisnika abeceno:");
 
-                    var sortedUsers = users.OrderBy(u => u.surname).ToList();
+                    var sortedUsers = users.OrderBy(u => u.Value.surname).ToList();
 
                     Console.WriteLine("\nID\tIME\tPREZIME\t\tDATUM RODJENJA\n");
                     foreach (var user in sortedUsers)
                     {
-                        Console.WriteLine($"{user.id}\t{user.name}\t{user.surname}\t\t{user.birth_date.ToString("dd.MM.yyyy")}");
+                        Console.WriteLine($"{user.Key}\t{user.Value.name}\t{user.Value.surname}\t\t{user.Value.birth_date.ToString("dd.MM.yyyy")}");
                     }
                     Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
                     string user_choice = Console.ReadLine();
@@ -551,8 +530,8 @@ class Program
 
                     var usersOver30 = users.Where(u =>
                     {
-                        var age = DateTime.Now.Year - u.birth_date.Year;
-                        if (DateTime.Now.Month < u.birth_date.Month || (DateTime.Now.Month == u.birth_date.Month && DateTime.Now.Day < u.birth_date.Day))
+                        var age = DateTime.Now.Year - u.Value.birth_date.Year;
+                        if (DateTime.Now.Month < u.Value.birth_date.Month || (DateTime.Now.Month == u.Value.birth_date.Month && DateTime.Now.Day < u.Value.birth_date.Day))
                         {
                             age--;
                         }
@@ -562,7 +541,7 @@ class Program
                     Console.WriteLine("\nID\tIME\tPREZIME\t\tDATUM RODJENJA\n");
                     foreach (var user in usersOver30)
                     {
-                        Console.WriteLine($"{user.id}\t{user.name}\t{user.surname}\t\t{user.birth_date.ToString("dd.MM.yyyy")}");
+                        Console.WriteLine($"{user.Key}\t{user.Value.name}\t{user.Value.surname}\t\t{user.Value.birth_date.ToString("dd.MM.yyyy")}");
                     }
                     Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
                     string input = Console.ReadLine();
@@ -570,7 +549,7 @@ class Program
                     if (input == "00")
                     {
                         Console.Clear();
-                        Main();
+                        //Main();
                         return;
                     }
                     Console.Clear();
@@ -583,16 +562,16 @@ class Program
 
                     foreach (var user in users)
                     {
-                        var negative_accounts = user.accounts.Where(a => a.amount < 0).ToList();
+                        var negative_accounts = user.Value.accounts.Where(a => a.Value < 0).ToList();
 
                         if (negative_accounts.Any())
                         {
                             found_negative = true;
-                            Console.WriteLine($"User: {user.name} {user.surname}");
+                            Console.WriteLine($"User: {user.Value.name} {user.Value.surname}");
 
                             foreach (var account in negative_accounts)
                             {
-                                Console.WriteLine($"\tracun: {account.name_acc}, stanje: {account.amount}");
+                                Console.WriteLine($"\tracun: {account.Key}, stanje: {account.Value}");
                             }
 
                             Console.WriteLine("\n");
@@ -632,7 +611,7 @@ class Program
         }
     }
 
-
+    
     //accounts
     static void AccountMenu()
     {
@@ -642,13 +621,13 @@ class Program
         string fname = "";
         string lname = "";
 
-        User curr_user = new User();
-        curr_user.exists = false;
+        bool user_found = false;
+        int user_id = -1;
 
         while (true)
         {
             Console.WriteLine("Unesite '00' za pocetni izbornik, ili bilo sto drugo za nastavak: \n");
-            string input = Console.ReadLine();
+            string input = Console.ReadLine()?.Trim();
 
             if (input == "00")
             {
@@ -657,7 +636,7 @@ class Program
             }
 
             Console.WriteLine("Unesite ime korisnika");
-            fname = Console.ReadLine().Trim();
+            fname = Console.ReadLine()?.Trim();
 
             if (string.IsNullOrWhiteSpace(fname) || fname.Length < 2)
             {
@@ -665,6 +644,7 @@ class Program
                 Console.WriteLine("Ime ne moze biti prazno, pokusajte ponovo.\n");
                 continue;
             }
+            fname = Char.ToUpper(fname[0]) + fname.Substring(1).ToLower();
 
             Console.WriteLine("Unesite prezime korisnika");
             lname = Console.ReadLine().Trim();
@@ -675,72 +655,76 @@ class Program
                 Console.WriteLine("Prezime ne moze biti prazno, pokusajte ponovo.\n");
                 continue;
             }
+            lname = Char.ToUpper(lname[0]) + lname.Substring(1).ToLower();
 
-            curr_user = users.FirstOrDefault(u => u.name.Equals(fname, StringComparison.OrdinalIgnoreCase) && u.surname.Equals(lname, StringComparison.OrdinalIgnoreCase));
+            foreach (var user in users)
+            {
+                if (user.Value.name.Equals(fname, StringComparison.OrdinalIgnoreCase) && user.Value.surname.Equals(lname, StringComparison.OrdinalIgnoreCase))
+                {
+                    user_id = user.Key; 
+                    user_found = true;  
+                    break;             
+                }
+            }
 
-            if (!curr_user.exists)
+            if (!user_found) 
             {
                 Console.Clear();
                 Console.WriteLine("Korisnik s tim imenom i prezimenom nije pronadjen, pokusajte ponovo.\n");
             }
             else
             {
-                break;
-            }
-        }
+                var user_data = users[user_id];
 
-        Console.Clear();
-
-        if (curr_user.exists)
-        {
-            while (true)
-            {
-                Console.WriteLine("1 - unos nove transakcije");
-                Console.WriteLine("2 - brisanje transakcije");
-                Console.WriteLine("3 - uređivanje transakcije");
-                Console.WriteLine("4 - pregled transakcija");
-                Console.WriteLine("5 - financijsko izvješće");
-                Console.WriteLine("\n0 - povratak");
-                Console.WriteLine("00 - povratak na pocetni izbornik\n");
-
-                string choice = Console.ReadLine();
-
-                switch (choice)
+                Console.Clear();
+                while (true)
                 {
-                    case "1":
-                        AddNewTransaction(curr_user);
-                        break;
-                    case "2":
-                        DeleteTransaction(curr_user);
-                        break;
-                    case "3":
-                        EditTransaction(curr_user);
-                        break;
-                    case "4":
-                        ViewTransactions(curr_user);
-                        break;
-                    case "5":
-                        FinancialStatement(curr_user);
-                        break;
-                    case "0":
-                        Console.Clear();
-                        AccountMenu();
-                        return;
-                    case "00":
-                        Console.Clear();
-                        Main();
-                        break;
-                    default:
-                        Console.Clear();
-                        Console.WriteLine("Nedopustena radnja, pokusajte ponovo.\n");
-                        break;
+                    Console.WriteLine("1 - Unos nove transakcije");
+                    Console.WriteLine("2 - Brisanje transakcije");
+                    Console.WriteLine("3 - Uredjivanje transakcije");
+                    Console.WriteLine("4 - Pregled transakcija");
+                    Console.WriteLine("5 - Financijsko izvjesce");
+                    Console.WriteLine("\n0 - Povratak");
+                    Console.WriteLine("00 - Povratak na pocetni izbornik\n");
+
+                    string choice = Console.ReadLine()?.Trim();
+
+                    switch (choice)
+                    {
+                        case "1":
+                            AddNewTransaction(user_id);
+                            break;
+                        case "2":
+                            DeleteTransaction(user_id);
+                            break;
+                        case "3":
+                            EditTransaction(user_id);
+                            break;
+                        case "4":
+                            ViewTransactions(user_id);
+                            break;
+                        case "5":
+                            FinancialStatement(user_id);
+                            break;
+                        case "0":
+                            Console.Clear();
+                            return;
+                        case "00":
+                            Console.Clear();
+                            Main();
+                            break;
+                        default:
+                            Console.Clear();
+                            Console.WriteLine("Nedopustena radnja, pokusajte ponovo.\n");
+                            break;
+                    }
                 }
             }
         }
-
     }
 
-    static void AddNewTransaction(User person)
+
+    static void AddNewTransaction(int id)
     {
         Console.Clear();
         Console.WriteLine("Izbornik: Nova Transakcija\n");
@@ -761,7 +745,7 @@ class Program
                 Console.Clear();
                 break;
             }
-            else if(choice == "0")
+            else if (choice == "0")
             {
                 Console.Clear();
                 return;
@@ -775,7 +759,7 @@ class Program
             else
             {
                 Console.Clear();
-                Console.WriteLine("Pogresan unos, pokusajte ponovno.");
+                Console.WriteLine("Pogresan unos, pokusajte ponovno\n");
             }
         }
 
@@ -788,7 +772,7 @@ class Program
             Console.WriteLine("Odaberite racun (checking, savings, prepaid): ");
             account_type = Console.ReadLine().ToLower().Trim();
 
-            if(account_type == "0")
+            if (account_type == "0")
             {
                 Console.Clear();
                 return;
@@ -800,10 +784,10 @@ class Program
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(account_type))
+            if (string.IsNullOrWhiteSpace(account_type) || account_type.Any(char.IsDigit))
             {
                 Console.Clear();
-                Console.WriteLine("Unos je prazan, pokusajte ponovno.\n");
+                Console.WriteLine("Neispravan unos, pokusajte ponovno\n");
                 continue;
             }
 
@@ -821,17 +805,13 @@ class Program
         }
 
 
-        int acc_index = person.accounts.FindIndex(acc => acc.name_acc == account_type);
-        if(acc_index == -1)
+        if (!users[id].accounts.ContainsKey(account_type))
         {
             Console.Clear();
-            Console.WriteLine("Racun nije pronadjen\n");
+            Console.WriteLine("Račun nije pronađen\n");
             return;
         }
 
-        Account selected_account = person.accounts[acc_index];
-
-        // transaction ingredients
         double amount = 0;
         string description;
         string transaction_type = "";
@@ -839,7 +819,6 @@ class Program
         DateTime transaction_date = DateTime.Now;
 
 
-        // category input
         while (true)
         {
             Console.WriteLine("\nOdaberite tip transakcije:");
@@ -895,7 +874,6 @@ class Program
             }
         }
 
-        // amount input
         while (true)
         {
             Console.WriteLine("Unesite iznos transakcije: ");
@@ -912,15 +890,13 @@ class Program
             }
         }
 
-        //description
-        Console.WriteLine("Unesite opis transakcije: ");
+        Console.WriteLine("Unesite opis transakcije (enter - standardna transakcija): ");
         description = Console.ReadLine();
         if (string.IsNullOrEmpty(description))
         {
             description = "Standardna transakcija";
         }
 
-        // date input for previous transaction
         if (choice == "2")
         {
             Console.WriteLine("Unesite datum transakcije (dd/mm/yyyy): ");
@@ -939,17 +915,15 @@ class Program
             }
         }
 
-        // adding new transaction
-        selected_account.AddTransaction(amount, description, transaction_type, catg);
-        person.accounts[acc_index] = selected_account;
-        
+        AddTransaction(id, account_type, (float)amount, description, transaction_type, catg);
+
         Console.Clear();
         Console.WriteLine("Transakcija uspjesno dodana.\n");
         return;
     }
 
 
-    static void DeleteTransaction(User person)
+    static void DeleteTransaction(int id)
     {
         Console.Clear();
         while (true)
@@ -1025,16 +999,16 @@ class Program
 
                 bool transaction_found = false;
 
-                foreach (var account in person.accounts)
+                foreach (var account in transactions[id])
                 {
 
-                    var to_delete = account.transactions.Cast<Transaction>().FirstOrDefault(t => t.id == id_tran);
+                    var to_delete = account.Value.FirstOrDefault(t => t.Item1 == id_tran);
 
-                    if (!to_delete.Equals(default(Transaction)))
+                    if (to_delete != default)
                     {
-                        account.transactions.Remove(to_delete);
+                        account.Value.Remove(to_delete);
                         transaction_found = true;
-                        break;
+                        break; 
                     }
                 }
 
@@ -1056,12 +1030,12 @@ class Program
                     if (again == "yes")
                     {
                         Console.Clear();
-                        break; 
+                        break;
                     }
                     else if (again == "no")
                     {
                         Console.Clear();
-                        return; 
+                        return;
                     }
                     else
                     {
@@ -1089,17 +1063,17 @@ class Program
 
                 bool transaction_found = false;
 
-                foreach (var account in person.accounts)
+                foreach (var account in transactions[id])
                 {
                     var to_delete = choice == "2"
-                    ? account.transactions.Cast<Transaction>().Where(t => t.amount < amount_tran).ToList()
-                    : account.transactions.Cast<Transaction>().Where(t => t.amount > amount_tran).ToList();
+                    ? account.Value.Where(t => t.transaction_amount < amount_tran).ToList()
+                    : account.Value.Where(t => t.transaction_amount > amount_tran).ToList();
 
                     if (to_delete.Any())
                     {
-                        foreach(var transaction in to_delete)
+                        foreach (var transaction in to_delete)
                         {
-                            account.transactions.Remove(transaction);
+                            account.Value.Remove(transaction);
                         }
                         transaction_found = true;
                     }
@@ -1117,13 +1091,13 @@ class Program
 
                 bool transaction_found = false;
 
-                foreach (var account in person.accounts)
+                foreach (var account in transactions[id])
                 {
-                    var transactions_to_delete = account.transactions.Cast<Transaction>().Where(t => t.type == transaction_type).ToList();
+                    var transactions_to_delete = account.Value.Where(t => t.transaction_type == transaction_type).ToList();
 
                     foreach (var transaction in transactions_to_delete)
                     {
-                        account.transactions.Remove(transaction);
+                        account.Value.Remove(transaction);
                     }
                     transaction_found = true;
                 }
@@ -1150,14 +1124,14 @@ class Program
 
                 bool transaction_found = false;
 
-                foreach (var account in person.accounts)
+                foreach (var account in transactions[id])
                 {
-                    var transactions_to_delete = account.transactions.Cast<Transaction>().Where(t => t.category == input).ToList();
+                    var transactions_to_delete = account.Value.Where(t => t.transaction_category == input).ToList();
                     if (transactions_to_delete.Any())
                     {
                         foreach (var transaction in transactions_to_delete)
                         {
-                            account.transactions.Remove(transaction);
+                            account.Value.Remove(transaction);
                         }
                         transaction_found = true;
                     }
@@ -1178,7 +1152,7 @@ class Program
                 {
                     break;
                 }
-                else if(again == "no")
+                else if (again == "no")
                 {
                     Console.Clear();
                     return;
@@ -1192,7 +1166,8 @@ class Program
         }
     }
 
-    static void EditTransaction(User person)
+
+    static void EditTransaction(int id)
     {
         Console.Clear();
         Console.WriteLine("Izbornik: Uredjivanje transakcija\n");
@@ -1236,23 +1211,22 @@ class Program
             }
         }
 
-        int id;
         bool transaction_found = false;
+        int transaction_id;
 
         while (true)
         {
             Console.WriteLine("Unesite ID transakcije:");
-            if (!int.TryParse(Console.ReadLine(), out id) || id < 0)
+            if (!int.TryParse(Console.ReadLine(), out transaction_id) || transaction_id < 0)
             {
                 Console.Clear();
-                Console.WriteLine("Neispravan unos. ID mora biti pozitivan cijeli broj.");
+                Console.WriteLine("Neispravan unos. ID mora biti pozitivan cijeli broj\n");
                 continue;
             }
 
-            foreach (var account in person.accounts)
+            foreach (var account in users[id].accounts)
             {
-                var transaction = account.transactions.Cast<Transaction>().FirstOrDefault(t => t.id == id);
-                if (transaction.id != 0)
+                var transaction = transactions[id].FirstOrDefault(accountTransaction => accountTransaction.Key == account.Key && accountTransaction.Value.Any(transactionDetail => transactionDetail.Item1 == transaction_id));
                 {
                     transaction_found = true;
                     break;
@@ -1261,7 +1235,7 @@ class Program
 
             if (transaction_found)
             {
-                break;  
+                break;
             }
             else
             {
@@ -1270,16 +1244,16 @@ class Program
             }
         }
 
-        transaction_found = false;
-        Transaction edit_tran = new Transaction();
+        var target_transaction = default((int, float, string, string, string, DateTime));
+        string target_account = null;
 
-        foreach(var account in person.accounts)
+        foreach (var account in users[id].accounts)
         {
-            var transaction = account.transactions.Cast<Transaction>().FirstOrDefault(t => t.id == id);
-            if(transaction.id != 0)
+            var transaction = transactions[id][account.Key].FirstOrDefault(t => t.Item1 == transaction_id);
+            if (transaction.Item1 != 0)
             {
-                edit_tran = transaction;
-                transaction_found = true;
+                target_transaction = transaction;
+                target_account = account.Key;
                 break;
             }
         }
@@ -1294,26 +1268,31 @@ class Program
 
 
         //new amount
-        double new_amount;
+        float new_amount;
         while (true)
         {
             Console.WriteLine("Unesite novi iznos transakcije: \n");
-            if (!double.TryParse(Console.ReadLine(), out new_amount) || new_amount <= 0)
+            if (!float.TryParse(Console.ReadLine(), out new_amount) || new_amount <= 0)
             {
                 Console.Clear();
                 Console.WriteLine("Neispravan unos, iznos mora biti pozitivan broj\n");
             }
             else
             {
-                edit_tran.amount = new_amount;
-                break;
+                transactions[id][target_account].Remove(target_transaction);
+                target_transaction = (target_transaction.Item1, new_amount, target_transaction.Item3, target_transaction.Item4, target_transaction.Item5, DateTime.Now);
+                transactions[id][target_account].Add(target_transaction);
+
             }
+            break;
         }
 
-        //new descriptiom
         Console.WriteLine("Unesite novi opis transakcije:\n");
         string new_description = Console.ReadLine();
-        edit_tran.description = string.IsNullOrEmpty(new_description) ? "Standardna transakcija" : new_description;
+        target_transaction = (target_transaction.Item1, target_transaction.Item2,
+                      string.IsNullOrEmpty(new_description) ? target_transaction.Item3 : new_description,
+                      target_transaction.Item4, target_transaction.Item5, DateTime.Now);
+
 
         string[] validTypes = { "prihod", "rashod" };
         while (true)
@@ -1323,7 +1302,7 @@ class Program
 
             if (Array.Exists(validTypes, t => t == new_type))
             {
-                edit_tran.type = new_type;
+                target_transaction = (target_transaction.Item1, target_transaction.Item2, target_transaction.Item3, new_type, target_transaction.Item5, DateTime.Now);
                 break;
             }
             else
@@ -1341,33 +1320,35 @@ class Program
         while (true)
         {
             Console.WriteLine("Unesite kategoriju transakcije:\n");
-            if (edit_tran.type == "prihod")
+            if (target_transaction.Item4 == "prihod")
             {
                 available_categories = income_categories;
-                Console.WriteLine("\nDostupne kategorije za prihode:");
             }
             else
             {
                 available_categories = expense_categories;
-                Console.WriteLine("\nDostupne kategorije za rashode:");
-            }
-
-            foreach (string category in available_categories)
-            {
-                Console.WriteLine("- " + category);
             }
 
             string new_category;
 
             while (true)
             {
-                Console.WriteLine("Unesite kategoriju");
-                Console.WriteLine($"Kategorije: {string.Join(", ", available_categories)}");
+                available_categories = (target_transaction.Item4 == "prihod") ? income_categories : expense_categories;
+                Console.WriteLine("\nDostupne kategorije:");
+
+                foreach (string category in available_categories)
+                {
+                    Console.WriteLine("- " + category);
+                }
+
+                Console.WriteLine("Unesite kategoriju:");
                 new_category = Console.ReadLine().ToLower();
 
                 if (Array.Exists(available_categories, category => category == new_category))
                 {
-                    edit_tran.category = new_category;
+                    target_transaction = (target_transaction.Item1, target_transaction.Item2,
+                                          target_transaction.Item3, target_transaction.Item4,
+                                          new_category, target_transaction.Item6);
                     break;
                 }
                 else
@@ -1379,18 +1360,20 @@ class Program
             break;
         }
 
-        edit_tran.date = DateTime.Now;
-
-        foreach(var account in person.accounts)
+        if (target_account != null)
         {
-            var transaction = account.transactions.Cast<Transaction>().FirstOrDefault(t => t.id == id);
-            if (transaction.id != 0)
+            var accountTransactions = transactions[id][target_account];
+            for (int i = 0; i < accountTransactions.Count; i++)
             {
-                account.transactions.Remove(transaction);
-                account.transactions.Add(edit_tran);
-                break;
+                if (accountTransactions[i].Item1 == transaction_id)
+                {
+                    accountTransactions[i] = target_transaction;
+                    break;
+                }
             }
         }
+    
+
         Console.Clear();
         Console.WriteLine("Transakcija je uspjesno uredjena.\n");
         Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
@@ -1407,7 +1390,8 @@ class Program
         return;
     }
 
-    static void ViewTransactions(User person)
+
+    static void ViewTransactions(int id)
     {
         Console.Clear();
         while (true)
@@ -1415,7 +1399,7 @@ class Program
             Console.WriteLine("Izbornik: Pregled transakcija\n");
             Console.WriteLine("1 - sve transakcije:");
             Console.WriteLine("2 - sortirane po iznosu uzlazno");
-            Console.WriteLine("3 - sortirane po iznosu uzlazno");
+            Console.WriteLine("3 - sortirane po iznosu silazno");
             Console.WriteLine("4 - sortirane po opisu abecedno");
             Console.WriteLine("5 - sortirane po datumu uzlazno");
             Console.WriteLine("6 - sortirane po datumu silazno");
@@ -1428,7 +1412,7 @@ class Program
 
             string user_choice = Console.ReadLine();
 
-            var transactions_for_display = person.accounts.SelectMany(acc => acc.transactions.Cast<Transaction>()).ToList();
+            var transactions_for_display = transactions[id].SelectMany(account => account.Value).ToList();
 
             string[] validCategories = { "placa", "honorar", "poklon", "stipendija", "hrana", "prijevoz", "rezije", "hobi" };
             string sort_name = "";
@@ -1442,48 +1426,48 @@ class Program
                     break;
 
                 case "2":
-                    transactions_for_display.Sort((t1, t2) => t1.amount.CompareTo(t2.amount));
+                    transactions_for_display.Sort((t1, t2) => t1.Item2.CompareTo(t2.Item2));
                     Console.Clear();
                     Console.WriteLine("Transakcije sortirane po iznosu (uzlazno):");
                     sort_name = "Transakcije po iznosu uzlazno";
                     break;
 
                 case "3":
-                    transactions_for_display.Sort((t1, t2) => t2.amount.CompareTo(t1.amount));
+                    transactions_for_display.Sort((t1, t2) => t2.Item2.CompareTo(t1.Item2));
                     Console.Clear();
                     Console.WriteLine("Transakcije sortirane po iznosu (silazno):");
                     break;
 
                 case "4":
-                    transactions_for_display = transactions_for_display.OrderBy(t => t.description).ToList();
+                    transactions_for_display = transactions_for_display.OrderBy(t => t.Item3).ToList();
                     Console.Clear();
                     Console.WriteLine("Transakcije sortirane po opisu (abecedno):");
                     sort_name = "Transakcije po iznosu silazno";
                     break;
 
                 case "5":
-                    transactions_for_display = transactions_for_display.OrderBy(t => t.date).ToList();
+                    transactions_for_display = transactions_for_display.OrderBy(t => t.Item5).ToList();
                     Console.Clear();
                     Console.WriteLine("Transakcije sortirane po datumu (uzlazno):");
                     sort_name = "Transakcije po datumu uzlazno";
                     break;
 
                 case "6":
-                    transactions_for_display = transactions_for_display.OrderByDescending(t => t.date).ToList();
+                    transactions_for_display = transactions_for_display.OrderByDescending(t => t.Item5).ToList();
                     Console.Clear();
                     Console.WriteLine("Transakcije sortirane po datumu (silazno):");
                     sort_name = "Transakcije po iznosu silazno";
                     break;
 
                 case "7":
-                    transactions_for_display = transactions_for_display.Where(t => t.type.ToLower() == "prihod").ToList();
+                    transactions_for_display = transactions_for_display.Where(t => t.Item4.ToLower() == "prihod").ToList();
                     Console.Clear();
                     Console.WriteLine("Svi prihodi:");
                     sort_name = "Svi prihodi";
                     break;
 
                 case "8":
-                    transactions_for_display = transactions_for_display.Where(t => t.type.ToLower() == "rashod").ToList();
+                    transactions_for_display = transactions_for_display.Where(t => t.Item4.ToLower() == "rashod").ToList();
                     Console.Clear();
                     Console.WriteLine("Svi rashodi:");
                     sort_name = "Svi rashodi";
@@ -1499,12 +1483,11 @@ class Program
                         if (!validCategories.Contains(category_input))
                         {
                             Console.Clear();
-                            Console.WriteLine("neispravan unos, pokusajte ponovno\n");
+                            Console.WriteLine("Neispravan unos, pokusajte ponovno\n");
                         }
                     } while (!validCategories.Contains(category_input));
 
-
-                    transactions_for_display = transactions_for_display.Where(t => t.category.ToLower() == category_input).ToList();
+                    transactions_for_display = transactions_for_display.Where(t => t.Item4.ToLower() == category_input).ToList();
                     Console.Clear();
                     Console.WriteLine($"Sve transakcije za kategoriju '{category_input}':");
                     sort_name = $"Sve transakcije za kategoriju '{category_input}'";
@@ -1541,7 +1524,6 @@ class Program
                         Console.WriteLine("\nDostupne kategorije za rashod:");
                     }
 
-
                     string category_input_;
 
                     do
@@ -1556,14 +1538,13 @@ class Program
                             Console.WriteLine(string.Join(", ", available_categories));
                             continue;
                         }
-                        else
-                        {
-                            break; 
-                        }
 
-                    } while (true);
+                    } while (!validCategories.Contains(category_input_));
 
-                    transactions_for_display = transactions_for_display.Where(t => t.type.ToLower() == type_input && t.category.ToLower() == category_input_).ToList();
+                    transactions_for_display = transactions[id]
+                        .SelectMany(account => account.Value)  // Flatten the list of transactions
+                        .Where(t => t.Item1.ToString().ToLower() == type_input.ToLower() && t.Item4.ToString().ToLower() == category_input_.ToLower())
+                        .ToList();
                     Console.Clear();
                     Console.WriteLine($"Sve transakcije za tip '{type_input}' i kategoriju '{category_input_}':");
                     sort_name = $"Sve transakcije za tip '{type_input}' i kategoriju '{category_input_}'";
@@ -1590,14 +1571,13 @@ class Program
 
                 foreach (var transaction in transactions_for_display)
                 {
-                    Console.WriteLine(string.Format("{0,-10} {1,10:F2} {2,-30} {3,-15} {4,10:dd.MM.yyyy}",
-                        transaction.type,
-                        transaction.amount,
-                        transaction.description.Length > 30 ? transaction.description.Substring(0, 30) : transaction.description,
-                        transaction.category,
-                        transaction.date));
+                    string description = transaction.Item3.Length > 30 ? transaction.Item3.Substring(0, 30) : transaction.Item3;
+                    string dateFormatted = transaction.Item6.ToString("dd.MM.yyyy"); 
+
+                    Console.WriteLine($"{transaction.Item4,-10} {transaction.Item2,10:F2} {description,-30} {transaction.Item5,-15} {dateFormatted,10}");
                 }
             }
+        
 
             else
             {
@@ -1617,10 +1597,11 @@ class Program
                 return;
             }
         }
-        
+
     }
 
-    static void FinancialStatement(User person)
+
+    static void FinancialStatement(int user_id)
     {
         Console.Clear();
         while (true)
@@ -1640,27 +1621,27 @@ class Program
             switch (user_choice)
             {
                 case "1":
-                    CurrentBalance(person);
+                    CurrentBalance(user_id);
                     break;
 
                 case "2":
-                    NumberOfTransactions(person);
+                    NumberOfTransactions(user_id);
                     break;
 
                 case "3":
-                    IncomeAndExpensesDate(person);
+                    IncomeAndExpensesDate(user_id);
                     break;
 
                 case "4":
-                    PercentageCategory(person);
+                    PercentageCategory(user_id);
                     break;
 
                 case "5":
-                    AverageMonthYear(person);
+                    AverageMonthYear(user_id);
                     break;
 
                 case "6":
-                    AverageCategory(person);
+                    AverageCategory(user_id);
                     break;
                 case "0":
                     Console.Clear();
@@ -1678,24 +1659,25 @@ class Program
         }
     }
 
-    static void CurrentBalance(User person)
+    static void CurrentBalance(int user_id)
     {
         double totalIncome = 0;
         double totalExpenses = 0;
 
-        var all_transactions = person.accounts.SelectMany(acc => acc.transactions.Cast<Transaction>()).ToList();
-
-        foreach (var item in all_transactions)
+        foreach (var account in users[user_id].accounts)
         {
-            if (item is Transaction transaction)
+            string accountName = account.Key;
+            var accountTransactions = transactions[user_id][accountName];
+
+            foreach (var transaction in accountTransactions)
             {
-                if (transaction.type.ToLower() == "prihod")
+                if (transaction.transaction_type.ToLower() == "prihod")
                 {
-                    totalIncome += transaction.amount;
+                    totalIncome += transaction.transaction_amount;
                 }
-                else if (transaction.type.ToLower() == "rashod")
+                else if (transaction.transaction_type.ToLower() == "rashod")
                 {
-                    totalExpenses += transaction.amount;
+                    totalExpenses += transaction.transaction_amount;
                 }
             }
         }
@@ -1716,16 +1698,14 @@ class Program
         }
     }
 
-    static void NumberOfTransactions(User person)
+    static void NumberOfTransactions(int user_id)
     {
         int total = 0;
 
-        foreach (var account in person.accounts)
+        foreach (var account in users[user_id].accounts)
         {
-            foreach (Transaction transaction in account.transactions)
-            {
-                total++;
-            }
+            string accountName = account.Key;
+            total += transactions[user_id][accountName].Count;
         }
 
         Console.Clear();
@@ -1742,7 +1722,7 @@ class Program
         }
     }
 
-    static void IncomeAndExpensesDate(User person)
+    static void IncomeAndExpensesDate(int user_id)
     {
         int month, year;
 
@@ -1769,7 +1749,7 @@ class Program
             {
                 if (year >= 1000 && year <= 9999)
                 {
-                    break; 
+                    break;
                 }
                 else
                 {
@@ -1783,23 +1763,30 @@ class Program
             }
         }
 
-        var all_transactions = person.accounts.SelectMany(acc => acc.transactions.Cast<Transaction>()).ToList();
-        var month_transactions = all_transactions.Where(t => t.date.Month == month && t.date.Year == year).ToList();
-
         double total_income = 0;
         double total_expenses = 0;
 
-        foreach (var transaction in month_transactions)
+        foreach (var account in users[user_id].accounts)
         {
-            if (transaction.type.ToLower() == "prihod")
+            string accountName = account.Key;
+            var accountTransactions = transactions[user_id][accountName];
+
+            foreach (var transaction in accountTransactions)
             {
-                total_income += transaction.amount;
-            }
-            else if (transaction.type.ToLower() == "rashod")
-            {
-                total_expenses += transaction.amount;
+                if (transaction.transaction_date.Month == month && transaction.transaction_date.Year == year)
+                {
+                    if (transaction.transaction_type.ToLower() == "prihod")
+                    {
+                        total_income += transaction.transaction_amount;
+                    }
+                    else if (transaction.transaction_type.ToLower() == "rashod")
+                    {
+                        total_expenses += transaction.transaction_amount;
+                    }
+                }
             }
         }
+        
 
         Console.Clear();
         Console.WriteLine($"Ukupni prihodi: {total_income}");
@@ -1816,7 +1803,7 @@ class Program
         }
     }
 
-    static void PercentageCategory(User person)
+    static void PercentageCategory(int user_id)
     {
         Console.Clear();
 
@@ -1832,17 +1819,32 @@ class Program
             category_input = Console.ReadLine().ToLower();
         }
 
-        var allTransactions = person.accounts.SelectMany(acc => acc.transactions.Cast<Transaction>()).ToList();
+        double total_expense = 0;
+        double category_expense = 0;
 
-        double total_expense = allTransactions.Where(t => t.type.ToLower() == "rashod").Sum(t => t.amount);
+        foreach (var account in users[user_id].accounts)
+        {
+            string accountName = account.Key;
+            var accountTransactions = transactions[user_id][accountName];
 
-        double category_expense = allTransactions.Where(t => t.type.ToLower() == "rashod" && t.category.ToLower() == category_input).Sum(t => t.amount);
+            foreach (var transaction in accountTransactions)
+            {
+                if (transaction.transaction_type.ToLower() == "rashod")
+                {
+                    total_expense += transaction.transaction_amount;
 
+                    if (transaction.transaction_category.ToLower() == category_input)
+                    {
+                        category_expense += transaction.transaction_amount;
+                    }
+                }
+            }
+        }
         double percentage = (total_expense > 0) ? (category_expense / total_expense) * 100 : 0;
 
         Console.Clear();
         Console.WriteLine($"Postotak udjela rashoda za kategoriju '{category_input}' iznosi: {percentage:F2}%");
-        
+
         Console.WriteLine("\nUnesite bilo sto za povratak ili '00' za pocetni izbornik\n");
         string user_choice = Console.ReadLine();
         Console.Clear();
@@ -1857,7 +1859,7 @@ class Program
 
 
 
-    static void AverageMonthYear(User person)
+    static void AverageMonthYear(int user_id)
     {
         Console.Clear();
 
@@ -1889,17 +1891,31 @@ class Program
                 Console.WriteLine("Neispravan unos, pokusajte ponovno\n");
             }
         }
-        
 
-        var all_transactions = person.accounts.SelectMany(acc => acc.transactions.Cast<Transaction>()).ToList();
-        var month_transactions = all_transactions.Where(t => t.date.Year == year && t.date.Month == month).ToList();
 
-        if (month_transactions.Any())
+        double total_amount = 0;
+        int transaction_count = 0;
+
+        foreach (var account in users[user_id].accounts)
         {
-            double total_amount = month_transactions.Sum(t => t.amount);
-            double average_amount = total_amount / month_transactions.Count;
+            string accountName = account.Key;
+            var accountTransactions = transactions[user_id][accountName];
+
+            foreach (var transaction in accountTransactions)
+            {
+                if (transaction.transaction_date.Year == year && transaction.transaction_date.Month == month)
+                {
+                    total_amount += transaction.transaction_amount;
+                    transaction_count++;
+                }
+            }
+        }
+
+        if (transaction_count > 0)
+        {
+            double averageAmount = total_amount / transaction_count;
             Console.Clear();
-            Console.WriteLine($"Prosjecan iznos transakcija za {month}/{year}. iznosi: {average_amount:F2}\n");
+            Console.WriteLine($"Prosjecan iznos transakcija za {month}/{year}. iznosi: {averageAmount:F2}\n");
         }
         else
         {
@@ -1919,7 +1935,7 @@ class Program
     }
 
 
-    static void AverageCategory(User person)
+    static void AverageCategory(int user_id)
     {
         Console.Clear();
 
@@ -1934,16 +1950,29 @@ class Program
             category_input = Console.ReadLine().ToLower();
         }
 
-        var all_transactions = person.accounts.SelectMany(acc => acc.transactions.Cast<Transaction>()).ToList();
+        double total_amount = 0;
+        int transaction_count = 0;
 
-        var category_transactions = all_transactions.Where(t => t.category.ToLower() == category_input).ToList();
-
-        if (category_transactions.Any())
+        foreach (var account in users[user_id].accounts)
         {
-            double total_amount = category_transactions.Sum(t => t.amount);
-            double average_amount = total_amount / category_transactions.Count;
+            string accountName = account.Key;
+            var accountTransactions = transactions[user_id][accountName];
+
+            foreach (var transaction in accountTransactions)
+            {
+                if (transaction.transaction_category.ToLower() == category_input)
+                {
+                    total_amount += transaction.transaction_amount;
+                    transaction_count++;
+                }
+            }
+        }
+
+        if (transaction_count > 0)
+        {
+            double averageAmount = total_amount / transaction_count;
             Console.Clear();
-            Console.WriteLine($"prosjecan iznos transakcije u kategoriji '{category_input}' je: {average_amount:F2}\n");
+            Console.WriteLine($"Prosjecan iznos transakcije u kategoriji '{category_input}' je: {averageAmount:F2}\n");
         }
         else
         {
